@@ -3,6 +3,7 @@ import { supabase } from "./supabase-client.js";
 let currentUser = null;
 let currentProfile = null;
 let remotePartners = [];
+let remoteClubs = [];
 
 const icons = {
   arrow: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
@@ -62,14 +63,40 @@ const openMats = [
   { id:"sa", club:"Est BJJ Academy", city:"Saint-André", region:"Est", address:"5 chemin du Centre", day:"Mercredi", time:"18:30 – 20:30", type:"Gi & No-Gi", level:"Tous niveaux", contact:"0693 22 44 11", extra:"Une semaine Gi, une semaine No-Gi.", x:"east" }
 ];
 
+const seedClubs = [
+  { slug:"foucheroll-saint-denis", name:"FoucheRoll BJJ", city:"Saint-Denis", region:"Nord", address:"Sainte-Clotilde, Saint-Denis", latitude:-20.8907, longitude:55.4693, disciplines:"Gi · No-Gi · Adultes · Enfants", schedule:"Cours adultes, débutants, enfants et adolescents. Consulter le planning du club.", phone:"0692 95 15 80", email:"", instagram:"", website:"https://www.foucherollbjj.com/", source_url:"https://www.foucherollbjj.com/", open_mat_info:"", verified:true },
+  { slug:"foucheroll-saint-benoit", name:"FoucheRoll BJJ — Saint-Benoît", city:"Saint-Benoît", region:"Est", address:"9 rue des Myosotis, Saint-Benoît", latitude:-21.0337, longitude:55.7210, disciplines:"Gi · No-Gi", schedule:"Mardi et jeudi · 18h30–20h30", phone:"0692 95 15 80", email:"", instagram:"", website:"https://www.foucherollbjj.com/", source_url:"https://www.localgymsandfitness.com/YT/Sainte-Clotilde/360261104636484/FoucheRoll-BJJ", open_mat_info:"", verified:true },
+  { slug:"pythagore-saint-denis", name:"Académie Pythagore Saint-Denis", city:"Saint-Denis", region:"Nord", address:"Saint-Denis, La Réunion", latitude:-20.8789, longitude:55.4481, disciplines:"Jiu-Jitsu Brésilien · No-Gi · Grappling", schedule:"Horaires à confirmer auprès du club.", phone:"0692 13 68 46", email:"saintdenis@pythagorejiujitsu.com", instagram:"", website:"https://www.pythagorejiujitsu.com/", source_url:"https://www.pythagorejiujitsu.com/clubs-affilies/academie-saint-denis-la-reunion/", open_mat_info:"", verified:true },
+  { slug:"csag-saint-denis", name:"CSAG 974 Sports de combat", city:"Saint-Denis", region:"Nord", address:"8 route de la Montagne, 97400 Saint-Denis", latitude:-20.8878, longitude:55.4386, disciplines:"Gi · No-Gi · Grappling · MMA", schedule:"Lundi 18h–19h30 JJB · Mardi 6h30–8h No-Gi · Mercredi 19h30–21h No-Gi · Jeudi 19h30–21h JJB", phone:"0624 50 84 33", email:"sportdecombat.csag974@gmail.com", instagram:"https://www.instagram.com/csag974sportdecombat/", website:"https://www.csag974.fr/saint-denis-s17181/arts-martiaux-d5147", source_url:"https://www.csag974.fr/saint-denis-s17181/arts-martiaux-d5147", open_mat_info:"", verified:true },
+  { slug:"ascir-apjjb-le-port", name:"ASCIR / APJJB", city:"Le Port", region:"Ouest", address:"172 boulevard de Toulouse, 97420 Le Port", latitude:-20.9396, longitude:55.2993, disciplines:"Jiu-Jitsu Brésilien · Grappling · MMA", schedule:"Horaires à confirmer auprès du club.", phone:"0692 88 06 64", email:"associationportoise.contact@gmail.com", instagram:"", website:"https://ascir.re/", source_url:"https://ascir.re/", open_mat_info:"", verified:true },
+  { slug:"icon-reunion-saint-paul", name:"ICON Jiu-Jitsu Réunion", city:"Saint-Paul", region:"Ouest", address:"Dojo La Kaz JJB, 176 boulevard du Front de Mer, 97460 Saint-Paul", latitude:-21.0102, longitude:55.2695, disciplines:"Gi · No-Gi · Grappling · Adultes · Enfants", schedule:"Cours à Saint-Paul, Plateau Caillou, Saint-Gilles-les-Hauts et Le Guillaume.", phone:"0692 86 51 28", email:"", instagram:"https://www.instagram.com/jiujitsubjjreunionisland/", website:"", source_url:"https://www.localgymsandfitness.com/RE/Saint-Paul/159982297389329/Jiujitsu-ICON-reunion", open_mat_info:"Open mat du dimanche ouvert aux licenciés CFJJB.", verified:true },
+  { slug:"jco-reunion", name:"Judo Club de l’Ouest Réunion", city:"Saint-Paul", region:"Ouest", address:"Dojo Roquefeuil, 25 rue Bianca, 97434 Saint-Paul", latitude:-21.0561, longitude:55.2257, disciplines:"JJB · Ne-Waza · Judo", schedule:"Lundi 18h30–20h30 JJB · Mercredi 18h30–20h30 JJB / Ne-Waza", phone:"", email:"", instagram:"", website:"https://www.ffjudo.com/club-judo-club-de-l-ouest-reunion", source_url:"https://www.ffjudo.com/club-judo-club-de-l-ouest-reunion", open_mat_info:"", verified:true },
+  { slug:"jitzen-saint-louis", name:"Jitzen MKTeam Réunion", city:"Saint-Louis", region:"Sud", address:"Gymnase Hégésippe Hoarau, rue Sehedic Sery, 97421 La Rivière Saint-Louis", latitude:-21.2677, longitude:55.4126, disciplines:"Jiu-Jitsu Brésilien · Adultes · Enfants · Compétition", schedule:"Deux lieux à Saint-Louis : La Rivière et Dojo de Plateau Goyave.", phone:"", email:"", instagram:"", website:"https://www.jitzen.fr/", source_url:"https://www.jitzen.fr/", open_mat_info:"", verified:true },
+  { slug:"cdk-974-saint-pierre", name:"CDK 974", city:"Saint-Pierre", region:"Sud", address:"Gymnase Gaston Richardson, 97410 Saint-Pierre", latitude:-21.3372, longitude:55.4780, disciplines:"Jiu-Jitsu Brésilien · Tous niveaux", schedule:"Horaires à confirmer auprès du club.", phone:"0643 17 16 53", email:"", instagram:"", website:"", source_url:"https://www.grizzliz.com/media/clubs/cdk-974/", open_mat_info:"", verified:true },
+  { slug:"vivancos-saint-pierre", name:"Vivancos Mixed Fight", city:"Saint-Pierre", region:"Sud", address:"161C chemin Badamier, Saint-Pierre", latitude:-21.3138, longitude:55.5002, disciplines:"Jiu-Jitsu Brésilien · MMA · Sports de combat", schedule:"Lundi à vendredi 14h–21h15 · Samedi 9h–17h", phone:"0692 79 24 42", email:"mixed.fighting.training@gmail.com", instagram:"", website:"https://mixedfight.re/", source_url:"https://mixedfight.re/", open_mat_info:"", verified:true }
+];
+
 function safe(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
   })[char]);
 }
 
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "#";
+  } catch {
+    return "#";
+  }
+}
+
 function getPartners() {
   return [...remotePartners, ...seedPartners];
+}
+
+function getClubs() {
+  return remoteClubs.length ? remoteClubs : seedClubs;
 }
 
 function initials(name = "") {
@@ -128,6 +155,20 @@ async function loadRemotePartners() {
     return;
   }
   remotePartners = (data || []).map(formatRemotePartner);
+}
+
+async function loadRemoteClubs() {
+  const { data, error } = await supabase
+    .from("clubs")
+    .select("slug,name,city,region,address,latitude,longitude,disciplines,schedule,phone,email,instagram,website,source_url,open_mat_info,verified")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.info("L’annuaire Supabase attend la création de la table clubs :", error.message);
+    remoteClubs = [];
+    return;
+  }
+  remoteClubs = data || [];
 }
 
 async function loadCurrentProfile() {
@@ -204,6 +245,24 @@ function openMatCard(o) {
   </article>`;
 }
 
+function clubCard(club) {
+  const primaryLink = club.website || club.instagram || club.source_url;
+  const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${club.address} ${club.city} La Réunion`)}`;
+  return `<article class="card club-directory-card" data-region="${safe(club.region)}" data-search="${safe(`${club.name} ${club.city} ${club.disciplines}`.toLowerCase())}">
+    <div class="card-top"><div><span class="tag green">${safe(club.region)}</span><h3>${safe(club.name)}</h3></div>${club.verified ? `<span class="verified-badge">${icons.check} Vérifié</span>` : `<span class="tag">À confirmer</span>`}</div>
+    <div class="meta">${icons.pin} ${safe(club.address || club.city)}</div>
+    <div class="tags"><span class="tag">${safe(club.disciplines)}</span></div>
+    <p class="club-schedule">${safe(club.schedule || "Horaires à confirmer auprès du club.")}</p>
+    ${club.open_mat_info ? `<div class="club-openmat">${icons.calendar}<span>${safe(club.open_mat_info)}</span></div>` : ""}
+    <div class="card-divider"></div>
+    <div class="club-contact-line">${club.phone ? `<span>${safe(club.phone)}</span>` : ""}${club.email ? `<span>${safe(club.email)}</span>` : ""}</div>
+    <div class="card-foot">
+      <a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="${mapLink}">${icons.map} Itinéraire</a>
+      ${primaryLink ? `<a class="btn btn-primary btn-sm" target="_blank" rel="noopener" href="${safeUrl(primaryLink)}">Voir le club</a>` : ""}
+    </div>
+  </article>`;
+}
+
 function homePage() {
   return layout(`
     <section class="hero"><div class="container hero-grid">
@@ -249,10 +308,36 @@ function openMatsPage() {
 }
 
 function mapPage() {
-  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Près de chez toi</span><h1>La carte des clubs</h1><p>Explore les clubs et les open mats aux quatre coins de La Réunion.</p></div></div></section>
-  <section class="page-main"><div class="container"><div class="map-layout">
+  const clubs = getClubs();
+  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Annuaire vérifié</span><h1>Les clubs de La Réunion</h1><p>Explore les clubs de JJB, leurs disciplines, leurs contacts et leurs lieux d’entraînement.</p></div><a class="btn btn-primary" href="#/add-club">${icons.plus} Ajouter mon club</a></div></section>
+  <section class="page-main"><div class="container">
+    <div class="searchbar club-searchbar"><input id="searchClub" class="field-inline" placeholder="Rechercher un club, une ville…"><select id="clubRegionFilter" class="field-inline"><option value="">Toute l’île</option><option>Nord</option><option>Ouest</option><option>Sud</option><option>Est</option></select><button class="btn btn-dark" id="resetClubs">Réinitialiser</button></div>
+    <div class="map-layout">
     <div class="map-card"><div id="mainOsmMap" class="leaflet-map" data-leaflet-map="full" aria-label="Carte interactive des clubs de La Réunion"></div><div class="map-key"><span><i class="dot blue"></i> Partenaire</span><span><i class="dot red"></i> Open mat</span><span><i class="dot green"></i> Club</span></div></div>
-    <div class="club-list">${openMats.map(o=>`<article class="club-item" data-club="${o.id}"><span class="tag">${o.region}</span><h3>${o.club}</h3><div class="meta">${icons.pin} ${o.city}</div><div class="tags"><span class="tag green">${o.day} ${o.time}</span><span class="tag">${o.type}</span></div></article>`).join("")}</div>
+    <div class="club-list">${clubs.map(club=>`<article class="club-item" data-club="${safe(club.slug)}"><span class="tag">${safe(club.region)}</span><h3>${safe(club.name)}</h3><div class="meta">${icons.pin} ${safe(club.city)}</div><div class="tags"><span class="tag green">${safe(club.disciplines)}</span></div></article>`).join("")}</div>
+    </div>
+    <div class="section-head club-directory-head"><div><div class="section-label">${clubs.length} lieux référencés</div><h2>Annuaire des clubs</h2></div><p>Une information est incorrecte ou un club manque ? Propose une mise à jour.</p></div>
+    <div class="cards-grid" id="clubsGrid">${clubs.map(clubCard).join("")}</div>
+  </div></section>`, "map");
+}
+
+function addClubPage() {
+  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Annuaire communautaire</span><h1>Ajouter ou corriger un club</h1><p>Envoie les informations publiques du club. L’équipe ROLL974 les vérifiera avant publication.</p></div></div></section>
+  <section class="page-main"><div class="container"><div class="form-layout">
+    <form class="form-card" id="clubSubmissionForm"><h2>Fiche du club</h2><p>Les champs marqués d’un * sont obligatoires.</p><div class="form-grid">
+      <div class="field full"><label for="clubName">Nom du club *</label><input required id="clubName" placeholder="Ex. Académie ROLL974"></div>
+      <div class="field"><label for="clubCity">Ville *</label><input required id="clubCity" placeholder="Ex. Saint-Paul"></div>
+      <div class="field"><label for="clubRegion">Zone *</label><select required id="clubRegion"><option>Nord</option><option>Ouest</option><option>Sud</option><option>Est</option></select></div>
+      <div class="field full"><label for="clubAddress">Adresse</label><input id="clubAddress" placeholder="Adresse du dojo ou gymnase"></div>
+      <div class="field"><label for="clubDisciplines">Disciplines</label><input id="clubDisciplines" placeholder="Gi, No-Gi, Grappling…"></div>
+      <div class="field"><label for="clubPhone">Téléphone public</label><input id="clubPhone" placeholder="0692…"></div>
+      <div class="field full"><label for="clubSchedule">Horaires</label><textarea id="clubSchedule" placeholder="Jours et heures des cours"></textarea></div>
+      <div class="field full"><label for="clubWebsite">Site ou réseau social</label><input id="clubWebsite" type="url" placeholder="https://…"></div>
+      <div class="field"><label for="clubContactName">Ton nom *</label><input required id="clubContactName"></div>
+      <div class="field"><label for="clubContactEmail">Ton email *</label><input required type="email" id="clubContactEmail"></div>
+      <div class="field full"><label for="clubMessage">Précisions</label><textarea id="clubMessage" placeholder="Open mats, corrections, informations utiles…"></textarea></div>
+    </div><div class="form-actions"><a class="btn btn-light" href="#/map">Annuler</a><button class="btn btn-primary" type="submit">${icons.check} Envoyer pour validation</button></div></form>
+    <aside class="tip-card"><div class="step-icon">${icons.check}</div><h3>Pourquoi une validation ?</h3><p>ROLL974 vérifie l’adresse et les contacts avant d’afficher une fiche. Cela évite les horaires obsolètes et les doublons.</p><p>Les coordonnées personnelles ne sont pas affichées sans accord.</p></aside>
   </div></div></section>`, "map");
 }
 
@@ -321,7 +406,7 @@ function simplePage(type) {
 
 const routes = {
   "": homePage, "partners": partnersPage, "open-mats": openMatsPage, "map": mapPage,
-  "publish": publishPage, "profile": profilePage, "login": loginPage, "register": registerPage,
+  "add-club": addClubPage, "publish": publishPage, "profile": profilePage, "login": loginPage, "register": registerPage,
   "about": () => simplePage("about"), "contact": () => simplePage("contact")
 };
 
@@ -331,14 +416,22 @@ function setupLeafletMaps() {
   const containers = document.querySelectorAll("[data-leaflet-map]");
   if (!containers.length || !window.L) return;
 
-  const points = [
+  const communityPoints = [
     { lat: -20.8789, lng: 55.4481, title: "Nord Grappling", subtitle: "Open mat · Saint-Denis", color: "#E53935" },
-    { lat: -20.9373, lng: 55.2919, title: "Port Fight Club", subtitle: "Club · Le Port", color: "#2E8B57" },
     { lat: -21.0099, lng: 55.2697, title: "Partenaire disponible", subtitle: "Saint-Paul", color: "#0066CC" },
     { lat: -21.3393, lng: 55.4781, title: "Sud Jiu-Jitsu", subtitle: "Open mat · Saint-Pierre", color: "#E53935" },
-    { lat: -20.9633, lng: 55.6507, title: "Est BJJ Academy", subtitle: "Club · Saint-André", color: "#2E8B57" },
     { lat: -21.2765, lng: 55.5180, title: "Partenaire disponible", subtitle: "Le Tampon", color: "#0066CC" }
   ];
+  const clubPoints = getClubs()
+    .filter(club => Number.isFinite(club.latitude) && Number.isFinite(club.longitude))
+    .map(club => ({
+      lat: club.latitude,
+      lng: club.longitude,
+      title: club.name,
+      subtitle: `Club · ${club.city}`,
+      color: "#2E8B57"
+    }));
+  const points = [...clubPoints, ...communityPoints];
 
   containers.forEach(container => {
     if (container.dataset.ready === "true") return;
@@ -409,6 +502,23 @@ function bindEvents() {
   };
   [search,region,type].forEach(el => el?.addEventListener(el.tagName==="INPUT"?"input":"change",filterPartners));
   document.getElementById("resetPartners")?.addEventListener("click", () => { search.value=""; region.value=""; type.value=""; filterPartners(); });
+
+  const clubSearch = document.getElementById("searchClub");
+  const clubRegion = document.getElementById("clubRegionFilter");
+  const filterClubs = () => {
+    const q = (clubSearch?.value || "").trim().toLowerCase();
+    const selectedRegion = clubRegion?.value || "";
+    document.querySelectorAll("#clubsGrid .club-directory-card").forEach(card => {
+      card.style.display = (!q || card.dataset.search.includes(q)) && (!selectedRegion || card.dataset.region === selectedRegion) ? "" : "none";
+    });
+  };
+  clubSearch?.addEventListener("input", filterClubs);
+  clubRegion?.addEventListener("change", filterClubs);
+  document.getElementById("resetClubs")?.addEventListener("click", () => {
+    clubSearch.value = "";
+    clubRegion.value = "";
+    filterClubs();
+  });
 
   let matRegion="", matType="";
   const filterMats = () => document.querySelectorAll("#openMatsGrid .openmat-card").forEach(card => {
@@ -538,6 +648,34 @@ function bindEvents() {
     render();
   });
 
+  document.getElementById("clubSubmissionForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const button = e.submitter;
+    if (button) button.disabled = true;
+    const { error } = await supabase.from("club_submissions").insert({
+      submitted_by: currentUser?.id || null,
+      club_name: document.getElementById("clubName").value.trim(),
+      city: document.getElementById("clubCity").value.trim(),
+      region: document.getElementById("clubRegion").value,
+      address: document.getElementById("clubAddress").value.trim(),
+      disciplines: document.getElementById("clubDisciplines").value.trim(),
+      schedule: document.getElementById("clubSchedule").value.trim(),
+      contact_name: document.getElementById("clubContactName").value.trim(),
+      contact_email: document.getElementById("clubContactEmail").value.trim(),
+      phone: document.getElementById("clubPhone").value.trim(),
+      website: document.getElementById("clubWebsite").value.trim(),
+      message: document.getElementById("clubMessage").value.trim()
+    });
+    if (button) button.disabled = false;
+    if (error) {
+      showToast(`Envoi impossible : ${error.message}`);
+      return;
+    }
+    showToast("Merci ! La fiche sera vérifiée avant publication.");
+    e.currentTarget.reset();
+    setTimeout(() => { location.hash = "#/map"; }, 1500);
+  });
+
   document.getElementById("contactForm")?.addEventListener("submit", e => {
     e.preventDefault();
     showToast("Message envoyé !");
@@ -561,7 +699,7 @@ window.addEventListener("hashchange", render);
 async function initialize() {
   const { data } = await supabase.auth.getSession();
   currentUser = data.session?.user || null;
-  await Promise.all([loadCurrentProfile(), loadRemotePartners()]);
+  await Promise.all([loadCurrentProfile(), loadRemotePartners(), loadRemoteClubs()]);
   render();
 
   supabase.auth.onAuthStateChange((_event, session) => {
