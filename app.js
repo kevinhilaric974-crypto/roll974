@@ -4,6 +4,7 @@ let currentUser = null;
 let currentProfile = null;
 let remotePartners = [];
 let remoteClubs = [];
+let remoteOpenMats = [];
 
 const icons = {
   arrow: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
@@ -56,11 +57,9 @@ const seedPartners = [
   { id: 6, name: "Anaïs L.", initials: "AL", city: "Le Tampon", club: "Tampon Grappling", belt: "Blanche", beltClass: "white", title: "Réviser les bases et faire des drills", type: "Gi", intensity: "Léger", date: "Mercredi 18:00", ago: "Il y a 2 j", weight: "55–70 kg", region: "Sud" }
 ];
 
-const openMats = [
-  { id:"sp", club:"Sud Jiu-Jitsu", city:"Saint-Pierre", region:"Sud", address:"12 rue des Bons-Enfants", day:"Samedi", time:"10:00 – 12:00", type:"Gi & No-Gi", level:"Tous niveaux", contact:"0262 12 34 56", extra:"Vestiaires et douches disponibles.", x:"south" },
-  { id:"lp", club:"Port Fight Club", city:"Le Port", region:"Ouest", address:"8 avenue de la Commune", day:"Dimanche", time:"09:30 – 11:30", type:"No-Gi", level:"Compétiteurs", contact:"0692 34 56 78", extra:"Rounds de 6 min. Rashguard obligatoire.", x:"west" },
-  { id:"sd", club:"Nord Grappling", city:"Saint-Denis", region:"Nord", address:"24 rue de Paris", day:"Vendredi", time:"19:00 – 21:00", type:"Gi", level:"Tous niveaux", contact:"@nordgrappling974", extra:"Ouvert aux visiteurs, inscription conseillée.", x:"north" },
-  { id:"sa", club:"Est BJJ Academy", city:"Saint-André", region:"Est", address:"5 chemin du Centre", day:"Mercredi", time:"18:30 – 20:30", type:"Gi & No-Gi", level:"Tous niveaux", contact:"0693 22 44 11", extra:"Une semaine Gi, une semaine No-Gi.", x:"east" }
+const seedOpenMats = [
+  { id:"icon-reunion-dimanche", club:"ICON Jiu-Jitsu Réunion", city:"Saint-Paul", region:"Ouest", address:"Saint-Gilles-les-Hauts, Saint-Paul — confirmer le dojo auprès du club", day:"Dimanche", time:"10:00 – 12:00", type:"Gi & No-Gi", level:"Tous niveaux", contact:"0692 86 51 28", extra:"Ouvert aux pratiquants licenciés CFJJB. Confirmer le format et le lieu avant de venir.", source_url:"https://www.localgymsandfitness.com/RE/Saint-Paul/159982297389329/Jiujitsu-ICON-reunion", verified:true, latitude:-21.0560, longitude:55.2640 },
+  { id:"bjj-reunion-island-etang-sale", club:"BJJ Réunion Island", city:"L’Étang-Salé", region:"Sud", address:"Rue Comtat Venaissin, 97427 L’Étang-Salé-les-Bains", day:"Samedi", time:"08:30 – 10:30", type:"Gi / No-Gi à confirmer", level:"Contacter le club", contact:"", extra:"Créneau trouvé dans un annuaire public : confirmation indispensable avant déplacement.", source_url:"https://search.webmartial.com/cgi-bin/comment_club.pl?club_id=10864&id2=hhmeinez", verified:false, latitude:-21.2668, longitude:55.3347 }
 ];
 
 const seedClubs = [
@@ -97,6 +96,10 @@ function getPartners() {
 
 function getClubs() {
   return remoteClubs.length ? remoteClubs : seedClubs;
+}
+
+function getOpenMats() {
+  return remoteOpenMats.length ? remoteOpenMats : seedOpenMats;
 }
 
 function initials(name = "") {
@@ -171,6 +174,36 @@ async function loadRemoteClubs() {
   remoteClubs = data || [];
 }
 
+async function loadRemoteOpenMats() {
+  const { data, error } = await supabase
+    .from("open_mats")
+    .select("slug,club_name,city,region,address,latitude,longitude,weekday,start_time,end_time,format,level,access_conditions,contact,source_url,verified,last_verified_at")
+    .order("weekday", { ascending: true });
+
+  if (error) {
+    console.info("L’agenda Supabase attend la création de la table open_mats :", error.message);
+    remoteOpenMats = [];
+    return;
+  }
+  remoteOpenMats = (data || []).map(mat => ({
+    id: mat.slug,
+    club: mat.club_name,
+    city: mat.city,
+    region: mat.region,
+    address: mat.address,
+    day: mat.weekday,
+    time: `${(mat.start_time || "").slice(0, 5)}${mat.end_time ? ` – ${mat.end_time.slice(0, 5)}` : ""}`,
+    type: mat.format,
+    level: mat.level,
+    contact: mat.contact,
+    extra: mat.access_conditions,
+    source_url: mat.source_url,
+    verified: mat.verified,
+    latitude: mat.latitude,
+    longitude: mat.longitude
+  }));
+}
+
 async function loadCurrentProfile() {
   if (!currentUser) {
     currentProfile = null;
@@ -237,11 +270,11 @@ function partnerCard(p) {
 }
 
 function openMatCard(o) {
-  return `<article class="card openmat-card" data-region="${o.region}" data-type="${o.type}" data-level="${o.level}">
-    <div class="om-visual"><span class="om-region">${o.region} · ${o.city}</span><h3>${o.club}</h3></div>
+  return `<article class="card openmat-card" data-region="${safe(o.region)}" data-type="${safe(o.type)}" data-level="${safe(o.level)}">
+    <div class="om-visual"><div class="openmat-status"><span class="om-region">${safe(o.region)} · ${safe(o.city)}</span>${o.verified ? `<span class="verified-badge">${icons.check} Vérifié</span>` : `<span class="tag red">À confirmer</span>`}</div><h3>${safe(o.club)}</h3></div>
     <div class="om-body"><div class="schedule"><div class="date-box">${o.day.slice(0,3).toUpperCase()}</div><div><strong>${o.day} · ${o.time}</strong><span>${o.type} · ${o.level}</span></div></div>
-    <div class="meta">${icons.pin} ${o.address}, ${o.city}</div><div class="card-divider"></div>
-    <div class="card-foot"><a class="btn btn-light btn-sm" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address+" "+o.city+" La Réunion")}">${icons.map} Itinéraire</a><button class="btn btn-primary btn-sm contact-btn" data-person="${o.club}">Contacter</button></div></div>
+    <div class="meta">${icons.pin} ${safe(o.address)}, ${safe(o.city)}</div>${o.extra ? `<p class="openmat-extra">${safe(o.extra)}</p>` : ""}<div class="card-divider"></div>
+    <div class="card-foot"><a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address+" "+o.city+" La Réunion")}">${icons.map} Itinéraire</a>${o.source_url ? `<a class="btn btn-primary btn-sm" target="_blank" rel="noopener" href="${safeUrl(o.source_url)}">Vérifier</a>` : `<button class="btn btn-primary btn-sm contact-btn" data-person="${safe(o.club)}" data-contact="${safe(o.contact)}">Contacter</button>`}</div></div>
   </article>`;
 }
 
@@ -285,7 +318,7 @@ function homePage() {
       </div>
     </div></section>
     <section class="section section-white"><div class="container"><div class="section-head"><div><div class="section-label">En ce moment</div><h2>Ils cherchent un partenaire</h2></div><a class="btn btn-light" href="#/partners">Voir toutes les annonces ${icons.arrow}</a></div><div class="cards-grid">${getPartners().slice(0,3).map(partnerCard).join("")}</div></div></section>
-    <section class="section"><div class="container"><div class="section-head"><div><div class="section-label">Où rouler cette semaine</div><h2>Les prochains open mats</h2></div><a class="btn btn-light" href="#/open-mats">Tous les open mats ${icons.arrow}</a></div><div class="cards-grid">${openMats.slice(0,3).map(openMatCard).join("")}</div></div></section>
+    <section class="section"><div class="container"><div class="section-head"><div><div class="section-label">Où rouler cette semaine</div><h2>Les prochains open mats</h2></div><a class="btn btn-light" href="#/open-mats">Tous les open mats ${icons.arrow}</a></div><div class="cards-grid">${getOpenMats().slice(0,3).map(openMatCard).join("")}</div></div></section>
     <section class="section section-white"><div class="container"><div class="cta"><div><h2>Ton prochain partenaire est peut-être à quelques kilomètres.</h2><p>Publie une annonce en moins de deux minutes.</p></div><a class="btn btn-light" href="#/publish">${icons.plus} Créer une annonce</a></div></div></section>
   `);
 }
@@ -299,12 +332,38 @@ function partnersPage() {
 }
 
 function openMatsPage() {
-  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Agenda de l’île</span><h1>Open mats à La Réunion</h1><p>Trouve les sessions ouvertes dans les clubs du Nord, de l’Ouest, du Sud et de l’Est.</p></div><a class="btn btn-light" href="#/map">${icons.map} Voir la carte</a></div></section>
+  const mats = getOpenMats();
+  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Agenda vérifié de l’île</span><h1>Open mats à La Réunion</h1><p>Consulte les créneaux publiés et vérifie toujours les conditions auprès du club avant de te déplacer.</p></div><div class="hero-actions"><a class="btn btn-primary" href="#/add-open-mat">${icons.plus} Ajouter un open mat</a><a class="btn btn-light" href="#/map">${icons.map} Voir la carte</a></div></div></section>
     <section class="page-main"><div class="container">
       <div class="section-label">Filtrer par zone</div><div class="filters" id="regionFilters"><button class="filter active" data-value="">Toute l’île</button>${["Nord","Ouest","Sud","Est"].map(x=>`<button class="filter" data-value="${x}">${x}</button>`).join("")}</div>
       <div class="section-label">Filtrer par format</div><div class="filters" id="matTypeFilters"><button class="filter active" data-value="">Tous</button><button class="filter" data-value="Gi">Gi</button><button class="filter" data-value="No-Gi">No-Gi</button><button class="filter" data-value="Tous niveaux">Tous niveaux</button><button class="filter" data-value="Compétiteurs">Compétiteurs</button></div>
-      <div class="cards-grid" id="openMatsGrid">${openMats.map(openMatCard).join("")}</div>
+      <div class="cards-grid" id="openMatsGrid">${mats.map(openMatCard).join("")}</div>
+      <div class="directory-notice"><strong>Un créneau manque ?</strong><span>Les responsables de club peuvent proposer un open mat. La fiche sera vérifiée avant publication.</span><a class="btn btn-primary btn-sm" href="#/add-open-mat">Proposer un créneau</a></div>
     </div></section>`, "open-mats");
+}
+
+function addOpenMatPage() {
+  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Agenda communautaire</span><h1>Ajouter ou corriger un open mat</h1><p>Envoie le créneau public du club. ROLL974 le vérifiera avant publication.</p></div></div></section>
+  <section class="page-main"><div class="container"><div class="form-layout">
+    <form class="form-card" id="openMatSubmissionForm"><h2>Informations du créneau</h2><p>Les champs marqués d’un * sont obligatoires.</p><div class="form-grid">
+      <div class="field full"><label for="matClubName">Nom du club *</label><input required id="matClubName"></div>
+      <div class="field"><label for="matCity">Ville *</label><input required id="matCity"></div>
+      <div class="field"><label for="matRegion">Zone *</label><select required id="matRegion"><option>Nord</option><option>Ouest</option><option>Sud</option><option>Est</option></select></div>
+      <div class="field full"><label for="matAddress">Adresse *</label><input required id="matAddress"></div>
+      <div class="field"><label for="matWeekday">Jour *</label><select required id="matWeekday">${["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"].map(day=>`<option>${day}</option>`).join("")}</select></div>
+      <div class="field"><label for="matFormat">Format *</label><select required id="matFormat"><option>Gi</option><option>No-Gi</option><option>Gi & No-Gi</option><option>Grappling</option></select></div>
+      <div class="field"><label for="matStart">Début *</label><input required type="time" id="matStart"></div>
+      <div class="field"><label for="matEnd">Fin</label><input type="time" id="matEnd"></div>
+      <div class="field"><label for="matLevel">Niveau accepté</label><input id="matLevel" placeholder="Tous niveaux, compétiteurs…"></div>
+      <div class="field"><label for="matPublicContact">Contact public</label><input id="matPublicContact" placeholder="Téléphone, Instagram…"></div>
+      <div class="field full"><label for="matConditions">Conditions d’accès</label><textarea id="matConditions" placeholder="Licence, inscription, tarif, matériel…"></textarea></div>
+      <div class="field full"><label for="matSource">Lien officiel du club</label><input type="url" id="matSource" placeholder="https://…"></div>
+      <div class="field"><label for="matContactName">Ton nom *</label><input required id="matContactName"></div>
+      <div class="field"><label for="matContactEmail">Ton email *</label><input required type="email" id="matContactEmail"></div>
+      <div class="field full"><label for="matMessage">Précisions</label><textarea id="matMessage"></textarea></div>
+    </div><div class="form-actions"><a class="btn btn-light" href="#/open-mats">Annuler</a><button class="btn btn-primary" type="submit">${icons.check} Envoyer pour validation</button></div></form>
+    <aside class="tip-card"><div class="step-icon">${icons.calendar}</div><h3>Un agenda fiable</h3><p>Les open mats changent parfois de lieu, d’horaire ou de format. ROLL974 vérifie chaque proposition avant publication.</p><p>Indique un lien officiel ou un contact du club lorsque c’est possible.</p></aside>
+  </div></div></section>`, "open-mats");
 }
 
 function mapPage() {
@@ -406,7 +465,7 @@ function simplePage(type) {
 
 const routes = {
   "": homePage, "partners": partnersPage, "open-mats": openMatsPage, "map": mapPage,
-  "add-club": addClubPage, "publish": publishPage, "profile": profilePage, "login": loginPage, "register": registerPage,
+  "add-club": addClubPage, "add-open-mat": addOpenMatPage, "publish": publishPage, "profile": profilePage, "login": loginPage, "register": registerPage,
   "about": () => simplePage("about"), "contact": () => simplePage("contact")
 };
 
@@ -417,9 +476,7 @@ function setupLeafletMaps() {
   if (!containers.length || !window.L) return;
 
   const communityPoints = [
-    { lat: -20.8789, lng: 55.4481, title: "Nord Grappling", subtitle: "Open mat · Saint-Denis", color: "#E53935" },
     { lat: -21.0099, lng: 55.2697, title: "Partenaire disponible", subtitle: "Saint-Paul", color: "#0066CC" },
-    { lat: -21.3393, lng: 55.4781, title: "Sud Jiu-Jitsu", subtitle: "Open mat · Saint-Pierre", color: "#E53935" },
     { lat: -21.2765, lng: 55.5180, title: "Partenaire disponible", subtitle: "Le Tampon", color: "#0066CC" }
   ];
   const clubPoints = getClubs()
@@ -431,7 +488,16 @@ function setupLeafletMaps() {
       subtitle: `Club · ${club.city}`,
       color: "#2E8B57"
     }));
-  const points = [...clubPoints, ...communityPoints];
+  const openMatPoints = getOpenMats()
+    .filter(mat => Number.isFinite(mat.latitude) && Number.isFinite(mat.longitude))
+    .map(mat => ({
+      lat: mat.latitude,
+      lng: mat.longitude,
+      title: mat.club,
+      subtitle: `Open mat · ${mat.day} ${mat.time}`,
+      color: "#E53935"
+    }));
+  const points = [...clubPoints, ...openMatPoints, ...communityPoints];
 
   containers.forEach(container => {
     if (container.dataset.ready === "true") return;
@@ -676,6 +742,38 @@ function bindEvents() {
     setTimeout(() => { location.hash = "#/map"; }, 1500);
   });
 
+  document.getElementById("openMatSubmissionForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const button = e.submitter;
+    if (button) button.disabled = true;
+    const { error } = await supabase.from("open_mat_submissions").insert({
+      submitted_by: currentUser?.id || null,
+      club_name: document.getElementById("matClubName").value.trim(),
+      city: document.getElementById("matCity").value.trim(),
+      region: document.getElementById("matRegion").value,
+      address: document.getElementById("matAddress").value.trim(),
+      weekday: document.getElementById("matWeekday").value,
+      start_time: document.getElementById("matStart").value,
+      end_time: document.getElementById("matEnd").value || null,
+      format: document.getElementById("matFormat").value,
+      level: document.getElementById("matLevel").value.trim(),
+      access_conditions: document.getElementById("matConditions").value.trim(),
+      public_contact: document.getElementById("matPublicContact").value.trim(),
+      source_url: document.getElementById("matSource").value.trim(),
+      contact_name: document.getElementById("matContactName").value.trim(),
+      contact_email: document.getElementById("matContactEmail").value.trim(),
+      message: document.getElementById("matMessage").value.trim()
+    });
+    if (button) button.disabled = false;
+    if (error) {
+      showToast(`Envoi impossible : ${error.message}`);
+      return;
+    }
+    showToast("Merci ! Le créneau sera vérifié avant publication.");
+    e.currentTarget.reset();
+    setTimeout(() => { location.hash = "#/open-mats"; }, 1500);
+  });
+
   document.getElementById("contactForm")?.addEventListener("submit", e => {
     e.preventDefault();
     showToast("Message envoyé !");
@@ -699,7 +797,7 @@ window.addEventListener("hashchange", render);
 async function initialize() {
   const { data } = await supabase.auth.getSession();
   currentUser = data.session?.user || null;
-  await Promise.all([loadCurrentProfile(), loadRemotePartners(), loadRemoteClubs()]);
+  await Promise.all([loadCurrentProfile(), loadRemotePartners(), loadRemoteClubs(), loadRemoteOpenMats()]);
   render();
 
   supabase.auth.onAuthStateChange((_event, session) => {
