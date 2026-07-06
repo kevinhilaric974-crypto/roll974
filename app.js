@@ -1,3 +1,9 @@
+import { supabase } from "./supabase-client.js";
+
+let currentUser = null;
+let currentProfile = null;
+let remotePartners = [];
+
 const icons = {
   arrow: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
   search: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`,
@@ -63,8 +69,74 @@ function safe(value) {
 }
 
 function getPartners() {
-  try { return [...JSON.parse(localStorage.getItem("roll974-partners") || "[]"), ...seedPartners]; }
-  catch { return seedPartners; }
+  return [...remotePartners, ...seedPartners];
+}
+
+function initials(name = "") {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "R9";
+}
+
+function beltClass(belt = "") {
+  return ({ Blanche: "white", Violette: "purple", Marron: "brown" })[belt] || "";
+}
+
+function regionForCity(city) {
+  return ({
+    "Saint-Denis": "Nord", "Le Port": "Ouest", "Saint-Paul": "Ouest",
+    "Saint-Pierre": "Sud", "Le Tampon": "Sud", "Saint-André": "Est"
+  })[city] || "Ouest";
+}
+
+function formatSessionDate(date, time) {
+  if (!date) return "";
+  const value = new Date(`${date}T${time || "00:00"}`);
+  const day = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short" }).format(value);
+  return `${day} · ${(time || "").slice(0, 5)}`;
+}
+
+function formatRemotePartner(post) {
+  const profile = post.profiles || {};
+  return {
+    id: post.id,
+    userId: post.user_id,
+    name: profile.display_name || "Pratiquant ROLL974",
+    initials: initials(profile.display_name),
+    city: post.city,
+    club: profile.club || post.place,
+    belt: profile.belt || "Blanche",
+    beltClass: beltClass(profile.belt),
+    title: post.message,
+    type: post.discipline,
+    intensity: post.training_type,
+    date: formatSessionDate(post.session_date, post.session_time),
+    ago: "Annonce ROLL974",
+    weight: post.weight || "Tous poids",
+    region: post.region,
+    contact: profile.contact || ""
+  };
+}
+
+async function loadRemotePartners() {
+  const { data, error } = await supabase
+    .from("partner_posts")
+    .select("id,user_id,session_date,session_time,city,region,place,training_type,discipline,level,weight,message,created_at,profiles(display_name,club,belt,contact)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.info("Supabase attend la création des tables :", error.message);
+    remotePartners = [];
+    return;
+  }
+  remotePartners = (data || []).map(formatRemotePartner);
+}
+
+async function loadCurrentProfile() {
+  if (!currentUser) {
+    currentProfile = null;
+    return;
+  }
+  const { data } = await supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
+  currentProfile = data || null;
 }
 
 function brand() {
@@ -75,19 +147,26 @@ function layout(content, route = "") {
   const links = [
     ["partners","Partenaires"], ["open-mats","Open mats"], ["map","Carte des clubs"], ["about","À propos"]
   ];
+  const desktopAuth = currentUser
+    ? `<a class="btn btn-ghost btn-sm" href="#/profile">${icons.user} ${safe(currentProfile?.display_name || "Mon profil")}</a>
+       <button class="btn btn-light btn-sm" id="logoutBtn">Déconnexion</button>`
+    : `<a class="btn btn-ghost btn-sm" href="#/login">${icons.user} Connexion</a>`;
+  const mobileAuth = currentUser
+    ? `<a class="nav-link" href="#/profile">Mon profil</a><button class="nav-link logout-mobile" id="logoutMobile">Déconnexion</button>`
+    : `<a class="nav-link" href="#/login">Connexion</a>`;
   return `<div class="shell">
     <header class="topbar"><nav class="nav container">
       ${brand()}
       <div class="nav-links">${links.map(([r,n]) => `<a class="nav-link ${route===r?"active":""}" href="#/${r}">${n}</a>`).join("")}</div>
       <div class="nav-actions">
-        <a class="btn btn-ghost btn-sm" href="#/login">${icons.user} Connexion</a>
+        ${desktopAuth}
         <a class="btn btn-primary btn-sm" href="#/publish">${icons.plus} Publier</a>
         <button class="btn btn-light menu-btn" id="menuBtn" aria-label="Ouvrir le menu">${icons.menu}</button>
       </div>
     </nav>
     <div class="mobile-nav" id="mobileNav">
       ${links.map(([r,n]) => `<a class="nav-link" href="#/${r}">${n}</a>`).join("")}
-      <a class="nav-link" href="#/profile">Mon profil</a><a class="nav-link" href="#/login">Connexion</a>
+      ${mobileAuth}
     </div></header>
     <main>${content}</main>${footer()}
   </div>`;
@@ -112,7 +191,7 @@ function partnerCard(p) {
     <div class="tags"><span class="tag">${safe(p.type)}</span><span class="tag red">${safe(p.intensity)}</span><span class="tag">${safe(p.weight)}</span></div>
     <div class="meta">${icons.calendar} ${safe(p.date)}</div>
     <div class="meta">${icons.pin} ${safe(p.city)}, La Réunion</div>
-    <div class="card-divider"></div><div class="card-foot"><span class="time-ago">${safe(p.ago)}</span><button class="btn btn-light btn-sm contact-btn" data-person="${safe(p.name)}">${icons.message} Contacter</button></div>
+    <div class="card-divider"></div><div class="card-foot"><span class="time-ago">${safe(p.ago)}</span><button class="btn btn-light btn-sm contact-btn" data-person="${safe(p.name)}" data-contact="${safe(p.contact || "")}">${icons.message} Contacter</button></div>
   </article>`;
 }
 
@@ -196,25 +275,41 @@ function publishPage() {
 }
 
 function profilePage() {
-  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Espace pratiquant</span><h1>Mon profil</h1><p>Les informations qui aident les autres pratiquants à trouver le bon partenaire.</p></div><button class="btn btn-light edit-profile">Modifier le profil</button></div></section>
+  const p = currentProfile || {
+    display_name: currentUser?.user_metadata?.display_name || "Pratiquant ROLL974",
+    city: currentUser?.user_metadata?.city || "", club: "", belt: currentUser?.user_metadata?.belt || "Blanche",
+    weight: "", discipline: currentUser?.user_metadata?.discipline || "Gi & No-Gi",
+    objective: "", availability: "", contact: "", bio: ""
+  };
+  return layout(`<section class="page-hero"><div class="container"><div><span class="eyebrow">Espace pratiquant</span><h1>Mon profil</h1><p>Les informations qui aident les autres pratiquants à trouver le bon partenaire.</p></div></div></section>
   <section class="page-main"><div class="container"><div class="profile-grid">
-    <aside class="profile-card"><div class="profile-avatar">KR</div><h2>Kevin R.</h2><p>Ceinture bleue · Saint-Paul</p><div class="tags" style="justify-content:center"><span class="tag">Gi</span><span class="tag">No-Gi</span><span class="tag red">Compétition</span></div><div class="profile-stats"><div><strong>12</strong><span>SESSIONS</span></div><div><strong>8</strong><span>PARTENAIRES</span></div><div><strong>4.9</strong><span>ÉVALUATION</span></div></div></aside>
-    <div><section class="info-block"><h3>Informations de pratique</h3><dl class="info-grid"><div class="info"><dt>Club</dt><dd>West Coast BJJ</dd></div><div class="info"><dt>Grade</dt><dd>Ceinture bleue</dd></div><div class="info"><dt>Poids</dt><dd>78 kg</dd></div><div class="info"><dt>Objectif</dt><dd>Compétition & progression</dd></div><div class="info"><dt>Disponibilités</dt><dd>Soirs en semaine, samedi matin</dd></div><div class="info"><dt>Contact</dt><dd>WhatsApp · Instagram</dd></div></dl></section>
-    <section class="info-block"><h3>Ma présentation</h3><p style="color:var(--muted);line-height:1.7;margin:0">Je pratique depuis trois ans et je cherche surtout des partenaires réguliers pour travailler le No-Gi, les passages de garde et préparer les compétitions locales. Toujours partant pour des rounds techniques.</p></section></div>
+    <aside class="profile-card"><div class="profile-avatar">${safe(initials(p.display_name))}</div><h2>${safe(p.display_name)}</h2><p>Ceinture ${safe(p.belt)} · ${safe(p.city || "La Réunion")}</p><div class="tags" style="justify-content:center"><span class="tag">${safe(p.discipline)}</span>${p.objective ? `<span class="tag red">${safe(p.objective)}</span>` : ""}</div></aside>
+    <form class="form-card" id="profileForm"><h2>Mes informations</h2><p>Elles apparaîtront sur tes annonces.</p><div class="form-grid">
+      <div class="field"><label for="profileName">Prénom / pseudo</label><input required id="profileName" value="${safe(p.display_name)}"></div>
+      <div class="field"><label for="profileCity">Ville</label><select required id="profileCity">${["Saint-Paul","Saint-Denis","Le Port","Saint-Pierre","Saint-André","Le Tampon"].map(city => `<option ${p.city===city?"selected":""}>${city}</option>`).join("")}</select></div>
+      <div class="field"><label for="profileClub">Club</label><input id="profileClub" value="${safe(p.club)}" placeholder="Nom de ton club"></div>
+      <div class="field"><label for="profileBelt">Grade</label><select id="profileBelt">${["Blanche","Bleue","Violette","Marron","Noire"].map(belt => `<option ${p.belt===belt?"selected":""}>${belt}</option>`).join("")}</select></div>
+      <div class="field"><label for="profileWeight">Poids</label><input id="profileWeight" value="${safe(p.weight)}" placeholder="Ex. 78 kg"></div>
+      <div class="field"><label for="profileDiscipline">Discipline</label><select id="profileDiscipline">${["Gi & No-Gi","Gi","No-Gi","Grappling"].map(value => `<option ${p.discipline===value?"selected":""}>${value}</option>`).join("")}</select></div>
+      <div class="field"><label for="profileObjective">Objectif</label><input id="profileObjective" value="${safe(p.objective)}" placeholder="Loisir, compétition, drill…"></div>
+      <div class="field"><label for="profileAvailability">Disponibilités</label><input id="profileAvailability" value="${safe(p.availability)}" placeholder="Soirs, week-end…"></div>
+      <div class="field full"><label for="profileContact">Contact public</label><input id="profileContact" value="${safe(p.contact)}" placeholder="WhatsApp, Instagram ou email"></div>
+      <div class="field full"><label for="profileBio">Présentation</label><textarea id="profileBio" placeholder="Parle de ta pratique…">${safe(p.bio)}</textarea></div>
+    </div><div class="form-actions"><button class="btn btn-primary" type="submit">${icons.check} Enregistrer mon profil</button></div></form>
   </div></div></section>`, "profile");
 }
 
 function loginPage() {
   return `<div class="shell"><header class="topbar"><nav class="nav container">${brand()}<a class="btn btn-light btn-sm" href="#/">Retour au site</a></nav></header>
   <main class="auth-page"><form class="auth-card" id="loginForm">${brand()}<h1>Heureux de te revoir.</h1><p>Connecte-toi pour organiser ton prochain entraînement.</p>
-    <div class="field"><label>Email</label><input type="email" required placeholder="toi@exemple.com"></div><div class="field"><label>Mot de passe</label><input type="password" required placeholder="8 caractères minimum"></div>
+    <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" required autocomplete="email" placeholder="toi@exemple.com"></div><div class="field"><label for="loginPassword">Mot de passe</label><input id="loginPassword" type="password" required autocomplete="current-password" placeholder="8 caractères minimum"></div>
     <button class="btn btn-primary" type="submit">Se connecter ${icons.arrow}</button><p class="auth-switch">Pas encore de compte ? <a href="#/register">Créer mon profil</a></p></form></main></div>`;
 }
 
 function registerPage() {
   return `<div class="shell"><header class="topbar"><nav class="nav container">${brand()}<a class="btn btn-light btn-sm" href="#/">Retour au site</a></nav></header>
   <main class="auth-page"><form class="auth-card" id="registerForm">${brand()}<h1>Rejoins le mouvement.</h1><p>Crée ton profil pratiquant en quelques instants.</p>
-    <div class="form-grid"><div class="field"><label>Prénom / pseudo</label><input required placeholder="Ex. Kevin"></div><div class="field"><label>Ville</label><select required><option>Saint-Paul</option><option>Saint-Denis</option><option>Le Port</option><option>Saint-Pierre</option></select></div><div class="field full"><label>Email</label><input type="email" required placeholder="toi@exemple.com"></div><div class="field"><label>Grade</label><select><option>Blanche</option><option>Bleue</option><option>Violette</option><option>Marron</option><option>Noire</option></select></div><div class="field"><label>Discipline</label><select><option>Gi & No-Gi</option><option>Gi</option><option>No-Gi</option></select></div></div>
+    <div class="form-grid"><div class="field"><label for="registerName">Prénom / pseudo</label><input id="registerName" required placeholder="Ex. Kevin"></div><div class="field"><label for="registerCity">Ville</label><select id="registerCity" required><option>Saint-Paul</option><option>Saint-Denis</option><option>Le Port</option><option>Saint-Pierre</option><option>Saint-André</option><option>Le Tampon</option></select></div><div class="field full"><label for="registerEmail">Email</label><input id="registerEmail" type="email" required autocomplete="email" placeholder="toi@exemple.com"></div><div class="field"><label for="registerBelt">Grade</label><select id="registerBelt"><option>Blanche</option><option>Bleue</option><option>Violette</option><option>Marron</option><option>Noire</option></select></div><div class="field"><label for="registerDiscipline">Discipline</label><select id="registerDiscipline"><option>Gi & No-Gi</option><option>Gi</option><option>No-Gi</option><option>Grappling</option></select></div><div class="field full"><label for="registerPassword">Mot de passe</label><input id="registerPassword" type="password" minlength="8" required autocomplete="new-password" placeholder="8 caractères minimum"></div></div>
     <button class="btn btn-primary" type="submit">Créer mon profil ${icons.arrow}</button><p class="auth-switch">Déjà membre ? <a href="#/login">Se connecter</a></p></form></main></div>`;
 }
 
@@ -287,7 +382,23 @@ function showToast(message) {
 function bindEvents() {
   const menuBtn = document.getElementById("menuBtn");
   if (menuBtn) menuBtn.onclick = () => document.getElementById("mobileNav").classList.toggle("open");
-  document.querySelectorAll(".contact-btn").forEach(btn => btn.onclick = () => showToast(`Demande de contact prête pour ${btn.dataset.person}`));
+  document.querySelectorAll(".contact-btn").forEach(btn => btn.onclick = () => {
+    if (!currentUser) {
+      showToast("Connecte-toi pour contacter un pratiquant.");
+      setTimeout(() => { location.hash = "#/login"; }, 700);
+      return;
+    }
+    showToast(btn.dataset.contact ? `Contact de ${btn.dataset.person} : ${btn.dataset.contact}` : `Demande de contact prête pour ${btn.dataset.person}`);
+  });
+  const logout = async () => {
+    await supabase.auth.signOut();
+    currentUser = null;
+    currentProfile = null;
+    showToast("Tu es déconnecté.");
+    location.hash = "#/";
+  };
+  document.getElementById("logoutBtn")?.addEventListener("click", logout);
+  document.getElementById("logoutMobile")?.addEventListener("click", logout);
 
   const search = document.getElementById("searchPartner"), region = document.getElementById("regionFilter"), type = document.getElementById("typeFilter");
   const filterPartners = () => {
@@ -314,23 +425,152 @@ function bindEvents() {
     document.querySelector(`.club-item[data-club="${id}"]`)?.scrollIntoView({behavior:"smooth",block:"nearest"});
   });
 
-  document.getElementById("publishForm")?.addEventListener("submit", e => {
+  document.getElementById("publishForm")?.addEventListener("submit", async e => {
     e.preventDefault();
-    const city=document.getElementById("city").value, discipline=document.getElementById("discipline").value, training=document.getElementById("training").value;
-    const regionMap={"Saint-Denis":"Nord","Le Port":"Ouest","Saint-Paul":"Ouest","Saint-Pierre":"Sud","Le Tampon":"Sud","Saint-André":"Est"};
-    const p={id:Date.now(),name:"Kevin R.",initials:"KR",city,club:document.getElementById("place").value,belt:"Bleue",beltClass:"",title:document.getElementById("message").value, type:discipline,intensity:training,date:`${document.getElementById("date").value} · ${document.getElementById("time").value}`,ago:"À l’instant",weight:document.getElementById("weight").value||"Tous poids",region:regionMap[city]||"Ouest"};
-    const saved=JSON.parse(localStorage.getItem("roll974-partners")||"[]"); saved.unshift(p); localStorage.setItem("roll974-partners",JSON.stringify(saved));
-    showToast("Ton annonce est publiée !"); setTimeout(()=>location.hash="#/partners",700);
+    if (!currentUser) {
+      showToast("Connecte-toi avant de publier.");
+      setTimeout(() => { location.hash = "#/login"; }, 700);
+      return;
+    }
+    const city = document.getElementById("city").value;
+    const button = e.submitter;
+    if (button) button.disabled = true;
+    const { error } = await supabase.from("partner_posts").insert({
+      user_id: currentUser.id,
+      session_date: document.getElementById("date").value,
+      session_time: document.getElementById("time").value,
+      city,
+      region: regionForCity(city),
+      place: document.getElementById("place").value.trim(),
+      training_type: document.getElementById("training").value,
+      discipline: document.getElementById("discipline").value,
+      level: document.getElementById("level").value,
+      weight: document.getElementById("weight").value.trim() || "Tous poids",
+      message: document.getElementById("message").value.trim()
+    });
+    if (button) button.disabled = false;
+    if (error) {
+      showToast(`Publication impossible : ${error.message}`);
+      return;
+    }
+    await loadRemotePartners();
+    showToast("Ton annonce est publiée !");
+    setTimeout(() => { location.hash = "#/partners"; }, 700);
   });
-  ["loginForm","registerForm","contactForm"].forEach(id => document.getElementById(id)?.addEventListener("submit",e=>{e.preventDefault();showToast(id==="contactForm"?"Message envoyé !":"Bienvenue sur Roll974 !");if(id!=="contactForm")setTimeout(()=>location.hash="#/profile",650);}));
-  document.querySelector(".edit-profile")?.addEventListener("click",()=>showToast("L’édition du profil arrive dans la prochaine version."));
+
+  document.getElementById("loginForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const button = e.submitter;
+    if (button) button.disabled = true;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: document.getElementById("loginEmail").value.trim(),
+      password: document.getElementById("loginPassword").value
+    });
+    if (button) button.disabled = false;
+    if (error) {
+      showToast("Email ou mot de passe incorrect.");
+      return;
+    }
+    currentUser = data.user;
+    await loadCurrentProfile();
+    showToast("Bienvenue sur ROLL974 !");
+    location.hash = "#/profile";
+  });
+
+  document.getElementById("registerForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const button = e.submitter;
+    if (button) button.disabled = true;
+    const metadata = {
+      display_name: document.getElementById("registerName").value.trim(),
+      city: document.getElementById("registerCity").value,
+      belt: document.getElementById("registerBelt").value,
+      discipline: document.getElementById("registerDiscipline").value
+    };
+    const { data, error } = await supabase.auth.signUp({
+      email: document.getElementById("registerEmail").value.trim(),
+      password: document.getElementById("registerPassword").value,
+      options: { data: metadata }
+    });
+    if (button) button.disabled = false;
+    if (error) {
+      showToast(`Inscription impossible : ${error.message}`);
+      return;
+    }
+    if (!data.session) {
+      showToast("Compte créé ! Confirme ton adresse dans l’email reçu.");
+      setTimeout(() => { location.hash = "#/login"; }, 1800);
+      return;
+    }
+    currentUser = data.user;
+    await loadCurrentProfile();
+    showToast("Bienvenue dans la communauté !");
+    location.hash = "#/profile";
+  });
+
+  document.getElementById("profileForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const button = e.submitter;
+    if (button) button.disabled = true;
+    const profile = {
+      id: currentUser.id,
+      display_name: document.getElementById("profileName").value.trim(),
+      city: document.getElementById("profileCity").value,
+      club: document.getElementById("profileClub").value.trim(),
+      belt: document.getElementById("profileBelt").value,
+      weight: document.getElementById("profileWeight").value.trim(),
+      discipline: document.getElementById("profileDiscipline").value,
+      objective: document.getElementById("profileObjective").value.trim(),
+      availability: document.getElementById("profileAvailability").value.trim(),
+      contact: document.getElementById("profileContact").value.trim(),
+      bio: document.getElementById("profileBio").value.trim(),
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await supabase.from("profiles").upsert(profile);
+    if (button) button.disabled = false;
+    if (error) {
+      showToast(`Enregistrement impossible : ${error.message}`);
+      return;
+    }
+    currentProfile = profile;
+    await loadRemotePartners();
+    showToast("Ton profil est enregistré.");
+    render();
+  });
+
+  document.getElementById("contactForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    showToast("Message envoyé !");
+  });
 }
 
 function render() {
   const route = location.hash.replace(/^#\/?/, "").split("?")[0];
+  if ((route === "profile" || route === "publish") && !currentUser) {
+    document.getElementById("app").innerHTML = loginPage();
+    window.scrollTo(0, 0);
+    bindEvents();
+    return;
+  }
   document.getElementById("app").innerHTML = (routes[route] || homePage)();
   window.scrollTo(0,0); bindEvents(); setupLeafletMaps();
 }
 
 window.addEventListener("hashchange", render);
-render();
+
+async function initialize() {
+  const { data } = await supabase.auth.getSession();
+  currentUser = data.session?.user || null;
+  await Promise.all([loadCurrentProfile(), loadRemotePartners()]);
+  render();
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    setTimeout(async () => {
+      currentUser = session?.user || null;
+      await loadCurrentProfile();
+      render();
+    }, 0);
+  });
+}
+
+initialize();

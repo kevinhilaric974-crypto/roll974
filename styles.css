@@ -300,6 +300,15 @@ h2 { font: 800 clamp(30px, 4vw, 44px)/1.12 Manrope; letter-spacing: -.04em; marg
 .footer-links a:hover { color: white; }
 .copyright { border-top: 1px solid #172131; padding-top: 24px; color: #687588; font-size: 11px; display: flex; justify-content: space-between; }
 .mobile-nav { display: none; }
+.logout-mobile {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
 .toast { position:fixed; z-index:100; right:24px; bottom:24px; background:#0d1a2d; color:white; padding:15px 19px; border-radius:12px; box-shadow:var(--shadow); transform:translateY(30px); opacity:0; pointer-events:none; transition:.25s; font-weight:600; font-size:13px; }
 .toast.show { transform:none; opacity:1; }
 
