@@ -27,12 +27,7 @@ const islandSvg = (className = "") => `
   </svg>`;
 
 const logoSvg = () => `
-  <svg class="brand-logo" viewBox="0 0 82 62" aria-hidden="true">
-    <path class="logo-stone" d="M34.5 4 3 58h17.5l18.1-31.4 7.7 13.2H35.1L27.2 58H79L48 4H34.5Z" fill="currentColor"/>
-    <path class="logo-cut" d="M43.7 16.2 24.4 49.7h9.2L46 28.2l13 21.5h9.1L47.3 16.2h-3.6Z" fill="#080808"/>
-    <path class="logo-lava" d="M40.2 43.1h28.2L75.7 58H32.6l7.6-14.9Z" fill="currentColor"/>
-    <path class="logo-spark" d="M13 58 31 27" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".5"/>
-  </svg>`;
+  <img class="brand-logo brand-logo-img" src="./assets/logo-roll974.png" alt="" aria-hidden="true" loading="eager" decoding="async">`;
 
 const networkIsland = () => `
   <div class="network-island" aria-label="Réseau des pratiquants à La Réunion">
@@ -299,9 +294,9 @@ function homePage() {
   return layout(`
     <section class="hero"><div class="container hero-grid">
       <div class="hero-copy"><span class="eyebrow">La communauté du Jiu-Jitsu Brésilien à La Réunion</span>
-        <h1>Une seule communauté.<br>Plusieurs clubs.<br><span class="accent">Le même tatami.</span></h1>
-        <p>ROLL974 connecte les pratiquants de Jiu-Jitsu Brésilien de toute l’île pour s’entraîner plus souvent, progresser ensemble et faire grandir la scène locale.</p>
-        <div class="hero-actions"><a class="btn btn-primary" href="#/partners">${icons.search} Trouver un partenaire</a><a class="btn btn-light" href="#/open-mats">${icons.calendar} Voir les open mats</a></div>
+        <h1>Trouve un <span class="accent">partenaire</span> ou un club de JJB près de chez toi.</h1>
+        <p>ROLL974 connecte les pratiquants, les clubs et les open mats de La Réunion pour s’entraîner plus souvent et progresser ensemble.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="#/partners">${icons.search} Trouver un partenaire</a><a class="btn btn-light" href="#/map">${icons.map} Voir les clubs</a></div>
         <div class="trust-row"><div class="avatars"><span class="avatar">MR</span><span class="avatar">LD</span><span class="avatar">YP</span><span class="avatar">+28</span></div><span><b>31 pratiquants</b> disponibles aujourd’hui sur l’île</span></div>
       </div>
       <div class="hero-panel hero-cinema">
@@ -312,7 +307,7 @@ function homePage() {
       </div>
     </div></section>
     <div class="container"><div class="stats-strip"><div class="stat"><strong>${icons.search} Trouve</strong><span>un partenaire adapté</span></div><div class="stat"><strong>${icons.calendar} Organise</strong><span>tes entraînements</span></div><div class="stat"><strong>${icons.map} Découvre</strong><span>les open mats</span></div><div class="stat"><strong>${icons.arrow} Progresse</strong><span>avec la communauté</span></div></div></div>
-    <section class="section"><div class="container"><div class="section-head"><div><div class="section-label">Simple comme un shrimp</div><h2>Plus de temps sur le tatami</h2></div><p>Roll974 te rapproche des bonnes personnes, au bon endroit, au bon moment. Le reste se joue sur le tapis.</p></div>
+    <section class="section"><div class="container"><div class="section-head"><div><div class="section-label">Comment ça marche</div><h2>Plus de temps sur le tatami</h2></div><p>Roll974 te rapproche des bonnes personnes, au bon endroit, au bon moment. Le reste se joue sur le tapis.</p></div>
       <div class="steps">
         <div class="step"><div class="step-icon">${icons.user}</div><span class="step-number">ÉTAPE 01</span><h3>Crée ton profil</h3><p>Indique ton grade, ta zone, ta discipline et tes objectifs d’entraînement.</p></div>
         <div class="step"><div class="step-icon">${icons.search}</div><span class="step-number">ÉTAPE 02</span><h3>Trouve ton match</h3><p>Filtre par secteur, niveau ou type de pratique pour trouver le bon partenaire.</p></div>
