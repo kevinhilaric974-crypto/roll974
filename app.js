@@ -27,7 +27,7 @@ const islandSvg = (className = "") => `
   </svg>`;
 
 const logoSvg = () => `
-  <img class="brand-logo brand-logo-img" src="./assets/logo-roll974.png" alt="" aria-hidden="true" loading="eager" decoding="async">`;
+  <img class="brand-logo brand-logo-img" src="./assets/logo-roll974.png" alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.remove()">`;
 
 const networkIsland = () => `
   <div class="network-island" aria-label="Réseau des pratiquants à La Réunion">
@@ -300,7 +300,7 @@ function homePage() {
         <div class="trust-row"><div class="avatars"><span class="avatar">MR</span><span class="avatar">LD</span><span class="avatar">YP</span><span class="avatar">+28</span></div><span><b>31 pratiquants</b> disponibles aujourd’hui sur l’île</span></div>
       </div>
       <div class="hero-panel hero-cinema">
-        <img class="hero-photo" src="./assets/roll974-hero.jpg" alt="Deux pratiquants de Jiu-Jitsu Brésilien en combat au sol" loading="eager" decoding="async">
+        <img class="hero-photo" src="./assets/roll974-hero.jpg" alt="" loading="eager" decoding="async" onerror="this.remove()">
         <div class="hero-photo-overlay"></div>
         <div class="hero-stamp"><strong>974</strong><span>Notre île<br>notre force</span></div>
         <div class="floating-stat"><strong>12</strong><span>open mats cette semaine</span></div>
