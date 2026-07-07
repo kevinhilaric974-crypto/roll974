@@ -27,12 +27,11 @@ const islandSvg = (className = "") => `
   </svg>`;
 
 const logoSvg = () => `
-  <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true">
-    <circle cx="32" cy="29" r="21.5" fill="none" stroke="currentColor" stroke-width="3.5"/>
-    <path d="M17 31c3-7 7-12 14-15 5 2 11 6 16 13-3 9-9 15-17 16-7-1-11-6-13-14Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
-    <path d="m18 38 8-10 5 6 5-9 10 14M27 45l-9 9M37 45l10 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M25 43c3-4 11-4 14 0l-4 7h-6l-4-7Z" fill="#fff" stroke="currentColor" stroke-width="2"/>
-    <path class="logo-lava" d="m43 49 7 6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
+  <svg class="brand-logo" viewBox="0 0 82 62" aria-hidden="true">
+    <path class="logo-stone" d="M34.5 4 3 58h17.5l18.1-31.4 7.7 13.2H35.1L27.2 58H79L48 4H34.5Z" fill="currentColor"/>
+    <path class="logo-cut" d="M43.7 16.2 24.4 49.7h9.2L46 28.2l13 21.5h9.1L47.3 16.2h-3.6Z" fill="#080808"/>
+    <path class="logo-lava" d="M40.2 43.1h28.2L75.7 58H32.6l7.6-14.9Z" fill="currentColor"/>
+    <path class="logo-spark" d="M13 58 31 27" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".5"/>
   </svg>`;
 
 const networkIsland = () => `
@@ -300,12 +299,15 @@ function homePage() {
   return layout(`
     <section class="hero"><div class="container hero-grid">
       <div class="hero-copy"><span class="eyebrow">La communauté du Jiu-Jitsu Brésilien à La Réunion</span>
-        <h1>Trouve un <span class="accent">partenaire</span> d’entraînement près de chez toi.</h1>
-        <p>La première plateforme réunionnaise dédiée au Jiu-Jitsu Brésilien. Trouve, organise, progresse — ensemble.</p>
+        <h1>Une seule communauté.<br>Plusieurs clubs.<br><span class="accent">Le même tatami.</span></h1>
+        <p>ROLL974 connecte les pratiquants de Jiu-Jitsu Brésilien de toute l’île pour s’entraîner plus souvent, progresser ensemble et faire grandir la scène locale.</p>
         <div class="hero-actions"><a class="btn btn-primary" href="#/partners">${icons.search} Trouver un partenaire</a><a class="btn btn-light" href="#/open-mats">${icons.calendar} Voir les open mats</a></div>
         <div class="trust-row"><div class="avatars"><span class="avatar">MR</span><span class="avatar">LD</span><span class="avatar">YP</span><span class="avatar">+28</span></div><span><b>31 pratiquants</b> disponibles aujourd’hui sur l’île</span></div>
       </div>
-      <div class="hero-panel"><div id="heroOsmMap" class="leaflet-map hero-leaflet-map" data-leaflet-map="compact" aria-label="Carte interactive de La Réunion"></div>
+      <div class="hero-panel hero-cinema">
+        <img class="hero-photo" src="./assets/roll974-hero.jpg" alt="Deux pratiquants de Jiu-Jitsu Brésilien en combat au sol" loading="eager" decoding="async">
+        <div class="hero-photo-overlay"></div>
+        <div class="hero-stamp"><strong>974</strong><span>Notre île<br>notre force</span></div>
         <div class="floating-stat"><strong>12</strong><span>open mats cette semaine</span></div>
       </div>
     </div></section>
