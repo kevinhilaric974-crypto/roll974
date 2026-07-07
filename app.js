@@ -1,5 +1,4 @@
 import { supabase } from "./supabase-client.js";
-import logoUrl from "./assets/logo-roll974.png";
 
 let currentUser = null;
 let currentProfile = null;
@@ -28,7 +27,14 @@ const islandSvg = (className = "") => `
   </svg>`;
 
 const logoSvg = () => `
-  <img class="brand-logo brand-logo-img" src="${logoUrl}" alt="" aria-hidden="true" loading="eager" decoding="async">`;
+  <span class="brand-logo-wrap" aria-hidden="true">
+    <svg class="brand-logo brand-logo-fallback" viewBox="0 0 82 62">
+      <path class="logo-stone" d="M34.5 4 3 58h17.5l18.1-31.4 7.7 13.2H35.1L27.2 58H79L48 4H34.5Z" fill="currentColor"/>
+      <path class="logo-cut" d="M43.7 16.2 24.4 49.7h9.2L46 28.2l13 21.5h9.1L47.3 16.2h-3.6Z" fill="#080808"/>
+      <path class="logo-lava" d="M40.2 43.1h28.2L75.7 58H32.6l7.6-14.9Z" fill="currentColor"/>
+    </svg>
+    <img class="brand-logo brand-logo-img" src="./assets/logo-roll974.png" alt="" loading="eager" decoding="async" onerror="this.remove()">
+  </span>`;
 
 const networkIsland = () => `
   <div class="network-island" aria-label="Réseau des pratiquants à La Réunion">

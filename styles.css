@@ -758,7 +758,29 @@ h3 { line-height: 1.05; }
   filter: drop-shadow(0 0 14px rgba(255,255,255,.08));
 }
 
+.brand-logo-wrap {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.brand-logo-fallback {
+  width: 48px;
+  height: 38px;
+  color: var(--kimono);
+}
+
+.brand-logo-fallback .logo-lava {
+  color: var(--lave);
+  filter: drop-shadow(0 0 12px rgba(228,30,38,.36));
+}
+
 .brand-logo-img {
+  position: absolute;
+  inset: 0;
   width: 54px;
   height: 54px;
   border-radius: 999px;
@@ -1405,6 +1427,7 @@ h3 { line-height: 1.05; }
   .nav { height: 72px; }
   .brand { font-size: 22px; }
   .brand-logo { width: 42px; height: 32px; }
+  .brand-logo-wrap { width: 46px; height: 46px; }
   .brand-logo-img { width: 46px; height: 46px; }
   .hero { min-height: auto; }
   .hero-grid { padding: 54px 0 74px; gap: 42px; }
