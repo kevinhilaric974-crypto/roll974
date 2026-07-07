@@ -1,4 +1,5 @@
 import { supabase } from "./supabase-client.js";
+import logoUrl from "./assets/logo-roll974.png";
 
 let currentUser = null;
 let currentProfile = null;
@@ -27,7 +28,7 @@ const islandSvg = (className = "") => `
   </svg>`;
 
 const logoSvg = () => `
-  <img class="brand-logo brand-logo-img" src="./assets/logo-roll974.png" alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.remove()">`;
+  <img class="brand-logo brand-logo-img" src="${logoUrl}" alt="" aria-hidden="true" loading="eager" decoding="async">`;
 
 const networkIsland = () => `
   <div class="network-island" aria-label="Réseau des pratiquants à La Réunion">
@@ -299,8 +300,8 @@ function homePage() {
         <div class="hero-actions"><a class="btn btn-primary" href="#/partners">${icons.search} Trouver un partenaire</a><a class="btn btn-light" href="#/map">${icons.map} Voir les clubs</a></div>
         <div class="trust-row"><div class="avatars"><span class="avatar">MR</span><span class="avatar">LD</span><span class="avatar">YP</span><span class="avatar">+28</span></div><span><b>31 pratiquants</b> disponibles aujourd’hui sur l’île</span></div>
       </div>
-      <div class="hero-panel hero-cinema">
-        <img class="hero-photo" src="./assets/roll974-hero.jpg" alt="" loading="eager" decoding="async" onerror="this.remove()">
+      <div class="hero-panel hero-map-panel">
+        <div id="heroOsmMap" class="leaflet-map hero-leaflet-map" data-leaflet-map="compact" aria-label="Carte interactive de La Réunion"></div>
         <div class="hero-photo-overlay"></div>
         <div class="hero-stamp"><strong>974</strong><span>Notre île<br>notre force</span></div>
         <div class="floating-stat"><strong>12</strong><span>open mats cette semaine</span></div>
@@ -473,8 +474,8 @@ function setupLeafletMaps() {
   if (!containers.length || !window.L) return;
 
   const communityPoints = [
-    { lat: -21.0099, lng: 55.2697, title: "Partenaire disponible", subtitle: "Saint-Paul", color: "#0066CC" },
-    { lat: -21.2765, lng: 55.5180, title: "Partenaire disponible", subtitle: "Le Tampon", color: "#0066CC" }
+    { lat: -21.0099, lng: 55.2697, title: "Partenaire disponible", subtitle: "Saint-Paul", color: "#1565C0" },
+    { lat: -21.2765, lng: 55.5180, title: "Partenaire disponible", subtitle: "Le Tampon", color: "#1565C0" }
   ];
   const clubPoints = getClubs()
     .filter(club => Number.isFinite(club.latitude) && Number.isFinite(club.longitude))
@@ -483,7 +484,7 @@ function setupLeafletMaps() {
       lng: club.longitude,
       title: club.name,
       subtitle: `Club · ${club.city}`,
-      color: "#2E8B57"
+      color: "#2E7D32"
     }));
   const openMatPoints = getOpenMats()
     .filter(mat => Number.isFinite(mat.latitude) && Number.isFinite(mat.longitude))
@@ -492,7 +493,7 @@ function setupLeafletMaps() {
       lng: mat.longitude,
       title: mat.club,
       subtitle: `Open mat · ${mat.day} ${mat.time}`,
-      color: "#E53935"
+      color: "#E41E26"
     }));
   const points = [...clubPoints, ...openMatPoints, ...communityPoints];
 
